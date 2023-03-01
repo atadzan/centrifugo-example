@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div id="counter">-</div>
+<script src="https://unpkg.com/centrifuge@3.1.0/dist/centrifuge.js"></script>
+<script type="text/javascript">
+    const container = document.getElementById('counter');
+
+
+    const centrifuge = new Centrifuge("ws://localhost:8088/connection/websocket", {
+        token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTIifQ.--xPNf8QXGz3-Hq3jqkKdVwPK2cN7zzxls8YINKEtxk"
+    });
+
+
+    centrifuge.on('connecting', function (ctx) {
+        console.log(`connecting: ${ctx.code}, ${ctx.reason}`);
+    }).on('connected', function (ctx) {
+        console.log(`connected over ${ctx.transport}`);
+    }).on('disconnected', function (ctx) {
+        console.log(`disconnected: ${ctx.code}, ${ctx.reason}`);
+    }).connect();
+    let result = new Array()
+    centrifuge.history("parser", {limit: 100}).then(function(resp) {
+        console.log(resp);
+        result.push.apply(result, resp)
+        container.innerHTML = result;
+    }, function(err) {
+        console.log('history error', err);
+    });
+
+    const sub = centrifuge.newSubscription("parser");
+
+    sub.on('publication', function (ctx) {
+        result.push(ctx.data.process +" "+  ctx.data.status)
+        container.innerHTML = result;
+        document.title = ctx.data.input;
+    }).on('subscribing', function (ctx) {
+        console.log(`subscribing: ${ctx.code}, ${ctx.reason}`);
+    }).on('subscribed', function (ctx) {
+        console.log('subscribed', ctx);
+    }).on('unsubscribed', function (ctx) {
+        console.log(`unsubscribed: ${ctx.code}, ${ctx.reason}`);
+    }).subscribe();
+</script>
+</body>
+</html>
